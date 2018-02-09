@@ -1,4 +1,5 @@
-﻿using Project2015To2017.Definition;
+﻿using Microsoft.Extensions.Logging;
+using Project2015To2017.Definition;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -10,7 +11,12 @@ namespace Project2015To2017
 {
     internal sealed class NugetPackageTransformation : ITransformation
     {
-        public Task TransformAsync(XDocument projectFile, DirectoryInfo projectFolder, Project definition)
+        private ILogger Logger { get; set; }
+        public NugetPackageTransformation(ILoggerFactory loggerFactory)
+        {
+            this.Logger = loggerFactory.CreateLogger<NugetPackageTransformation>();
+        }
+        public Task<bool> TransformAsync(bool prevTransformationResult, XDocument projectFile, DirectoryInfo projectFolder, Project definition)
         {
             var nuspecFiles = projectFolder
                 .EnumerateFiles("*.nuspec", SearchOption.AllDirectories)
@@ -18,11 +24,12 @@ namespace Project2015To2017
 
             if (nuspecFiles.Length == 0)
             {
-                Console.WriteLine("No nuspec found, skipping package configuration.");
+                Logger.LogDebug("No nuspec found, skipping package configuration.");
+                return Task.FromResult(true);
             }
             else if (nuspecFiles.Length == 1)
             {
-                Console.WriteLine($"Reading package info from nuspec {nuspecFiles[0].FullName}.");
+                Logger.LogDebug($"Reading package info from nuspec {nuspecFiles[0].FullName}.");
 
                 XDocument nuspec;
                 using (var filestream = File.Open(nuspecFiles[0].FullName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
@@ -43,16 +50,17 @@ namespace Project2015To2017
 
                 if (definition.PackageConfiguration == null)
                 {
-                    Console.WriteLine("Error reading package info from nuspec.");
+                    Logger.LogError("Error reading package info from nuspec.");
                 }
+                return Task.FromResult(true);
             }
             else
             {
-                Console.WriteLine($@"Could not read from nuspec, multiple nuspecs found: 
-{string.Join(Environment.NewLine, nuspecFiles.Select(x => x.FullName))}.");
+                Console.WriteLine($@"Could not read from nuspec, multiple nuspecs found:  {string.Join(Environment.NewLine, nuspecFiles.Select(x => x.FullName))}.");
+                return Task.FromResult(false);
             }
 
-            return Task.CompletedTask;
+           
         }
 
         private void ExtractPackageConfiguration(Project definition, XDocument nuspec, XNamespace ns)

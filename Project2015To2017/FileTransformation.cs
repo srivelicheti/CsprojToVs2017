@@ -5,11 +5,17 @@ using System.Threading.Tasks;
 using System.Xml.Linq;
 using Project2015To2017.Definition;
 using System.Linq;
+using Microsoft.Extensions.Logging;
 
 namespace Project2015To2017
 {
     internal sealed class FileTransformation : ITransformation
     {
+        private ILogger Logger { get; set; }
+        public FileTransformation(ILoggerFactory loggerFactory)
+        {
+            this.Logger = loggerFactory.CreateLogger<FileTransformation>();
+        }
         private static readonly IReadOnlyList<string> ItemsToProject = new[]
         {
             "None",
@@ -26,8 +32,10 @@ namespace Project2015To2017
             "XamlAppDef"
         };
 
-        public Task TransformAsync(XDocument projectFile, DirectoryInfo projectFolder, Project definition)
+        public Task<bool> TransformAsync(bool prevTransformationResult, XDocument projectFile, DirectoryInfo projectFolder, Project definition)
         {
+            if (definition.Type == ApplicationType.Unknown) return Task.FromResult(true);
+
             XNamespace nsSys = "http://schemas.microsoft.com/developer/msbuild/2003";
             var itemGroups = projectFile
                 .Element(nsSys + "Project")
@@ -41,10 +49,10 @@ namespace Project2015To2017
 
             definition.ItemsToInclude = compileManualIncludes.Concat(otherIncludes).ToArray();
 
-            return Task.CompletedTask;
+            return Task.FromResult(true);
         }
 
-        private static IReadOnlyList<XElement> FindNonWildcardMatchedFiles(
+        private IReadOnlyList<XElement> FindNonWildcardMatchedFiles(
             DirectoryInfo projectFolder,
             IEnumerable<XElement> itemGroups,
             string wildcard,
@@ -59,12 +67,12 @@ namespace Project2015To2017
                 {
                     if (!Path.GetFullPath(Path.Combine(projectFolder.FullName, includeAttribute.Value)).StartsWith(projectFolder.FullName))
                     {
-                        Console.WriteLine($"Include cannot be done through wildcard, adding as separate include {compiledFile}.");
+                        Logger.LogWarning($"Include cannot be done through wildcard, adding as separate include {compiledFile}.");
                         manualIncludes.Add(compiledFile);
                     }
                     else if (compiledFile.Attributes().Count() != 1)
                     {
-                        Console.WriteLine($"Include cannot be done through wildcard, adding as separate include {compiledFile}.");
+                        Logger.LogWarning($"Include cannot be done through wildcard, adding as separate include {compiledFile}.");
                         manualIncludes.Add(compiledFile);
                     }
                     else if (compiledFile.Elements().Count() != 0)
@@ -82,7 +90,7 @@ namespace Project2015To2017
                         }
                         else
                         {
-                            Console.WriteLine($"Include cannot be done through wildcard, adding as separate include {compiledFile}.");
+                            Logger.LogWarning($"Include cannot be done through wildcard, adding as separate include {compiledFile}.");
                             manualIncludes.Add(compiledFile);
                         }
                     }
@@ -93,11 +101,12 @@ namespace Project2015To2017
                 }
                 else
                 {
-                    Console.WriteLine($"Compile found with no or wildcard include, full node {compiledFile}.");
+                    Logger.LogDebug($"Compile found with no or wildcard include, full node {compiledFile}.");
                 }
             }
 
             var filesInFolder = projectFolder.EnumerateFiles(wildcard, SearchOption.AllDirectories).Select(x => x.FullName).ToArray();
+            
             var knownFullPaths = manualIncludes
                 .Select(x => x.Attribute("Include")?.Value)
                 .Where(x => x != null)
@@ -113,12 +122,12 @@ namespace Project2015To2017
                     continue;
                 }
 
-                Console.WriteLine($"File found which was not included, consider removing {nonListedFile}.");
+                Logger.LogWarning($"File found which was not included, consider removing {nonListedFile}.");
             }
 
             foreach (var fileNotOnDisk in knownFullPaths.Except(filesInFolder).Where(x => x.StartsWith(projectFolder.FullName, StringComparison.OrdinalIgnoreCase)))
             {
-                Console.WriteLine($"File was included but is not on disk: {fileNotOnDisk}.");
+                Logger.LogWarning($"File was included but is not on disk: {fileNotOnDisk}.");
             }
 
             return manualIncludes;

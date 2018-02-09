@@ -6,12 +6,18 @@ using System.Xml.Linq;
 using Project2015To2017.Definition;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using Microsoft.Extensions.Logging;
 
 namespace Project2015To2017
 {
     internal sealed class AssemblyInfoTransformation : ITransformation
     {
-        public async Task TransformAsync(XDocument projectFile, DirectoryInfo projectFolder, Project definition)
+        private ILogger Logger { get; set; }
+        public AssemblyInfoTransformation(ILoggerFactory loggerFactory)
+        {
+            this.Logger = loggerFactory.CreateLogger<AssemblyInfoTransformation>();
+        }
+        public async Task<bool> TransformAsync(bool prevTransformationResult, XDocument projectFile, DirectoryInfo projectFolder, Project definition)
         {
             var assemblyInfoFiles = projectFolder
                 .EnumerateFiles("AssemblyInfo.cs", SearchOption.AllDirectories)
@@ -19,7 +25,7 @@ namespace Project2015To2017
 
             if (assemblyInfoFiles.Length == 1)
             {
-                Console.WriteLine($"Reading assembly info from {assemblyInfoFiles[0].FullName}.");
+                Logger.LogDebug($"Reading assembly info from {assemblyInfoFiles[0].FullName}.");
 
                 string text;
                 using (var filestream = File.Open(assemblyInfoFiles[0].FullName, FileMode.Open, FileAccess.Read))
@@ -44,9 +50,9 @@ namespace Project2015To2017
             }
             else
             {
-                Console.WriteLine($@"Could not read from assemblyinfo, multiple assemblyinfo files found: 
-{string.Join(Environment.NewLine, assemblyInfoFiles.Select(x => x.FullName))}.");
+                Logger.LogInformation($@"Could not read from assemblyinfo, multiple assemblyinfo files found: {string.Join(Environment.NewLine, assemblyInfoFiles.Select(x => x.FullName))}.");
             }
+            return (true);
         }
 
         private string GetAttributeValue<T>(string text)

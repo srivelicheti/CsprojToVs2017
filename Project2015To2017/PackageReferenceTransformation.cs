@@ -6,18 +6,25 @@ using System.Threading.Tasks;
 using System.Xml.Linq;
 using System.Xml;
 using System.Collections.Generic;
+using Microsoft.Extensions.Logging;
 
 namespace Project2015To2017
 {
     internal sealed class PackageReferenceTransformation : ITransformation
     {
-        public Task TransformAsync(XDocument projectFile, DirectoryInfo projectFolder, Project definition)
+        private ILogger Logger { get; set; }
+        public PackageReferenceTransformation(ILoggerFactory loggerFactory)
         {
+            this.Logger = loggerFactory.CreateLogger<PackageReferenceTransformation>();
+        }
+        public Task<bool> TransformAsync(bool prevTransformationResult, XDocument projectFile, DirectoryInfo projectFolder, Project definition)
+        {
+            //if (definition.Type == ApplicationType.Unknown) return Task.FromResult(false);
             var packagesConfig = projectFolder.GetFiles("packages.config", SearchOption.TopDirectoryOnly);
             if (packagesConfig == null || packagesConfig.Length == 0)
             {
-                Console.WriteLine("Packages.config file not found.");
-                return Task.CompletedTask;
+                Logger.LogDebug("Packages.config file not found.");
+                return Task.FromResult(true);
             }
 
             try
@@ -55,7 +62,7 @@ namespace Project2015To2017
                     {
                         if (versions.Any(v => v < 450))
                         {
-                            Console.WriteLine($"Warning - target framework net40 is not compatible with the MSTest NuGet packages. Please consider updating the target framework of your test project(s)");
+                            Logger.LogWarning($"Warning - target framework net40 is not compatible with the MSTest NuGet packages. Please consider updating the target framework of your test project(s)");
                         }
                     }
                 }
@@ -72,15 +79,15 @@ namespace Project2015To2017
 
                 foreach (var reference in definition.PackageReferences)
                 {
-                    Console.WriteLine($"Found nuget reference to {reference.Id}, version {reference.Version}.");
+                    Logger.LogDebug($"Found nuget reference to {reference.Id}, version {reference.Version}.");
                 }
             }
             catch(XmlException e)
             {
-                Console.WriteLine($"Got xml exception reading packages.config: " + e.Message);
+                Logger.LogError($"Got xml exception reading packages.config: " + e.Message);
             }
 
-            return Task.CompletedTask;
+            return Task.FromResult(true);
         }
     }
 }

@@ -4,12 +4,18 @@ using System.Threading.Tasks;
 using System.Xml.Linq;
 using Project2015To2017.Definition;
 using System.Linq;
+using Microsoft.Extensions.Logging;
 
 namespace Project2015To2017
 {
     internal sealed class AssemblyReferenceTransformation : ITransformation
     {
-        public Task TransformAsync(XDocument projectFile, DirectoryInfo projectFolder, Project definition)
+        private ILogger Logger { get; set; }
+        public AssemblyReferenceTransformation(ILoggerFactory loggerFactory)
+        {
+            this.Logger = loggerFactory.CreateLogger<AssemblyReferenceTransformation>();
+        }
+        public Task<bool> TransformAsync(bool prevTransformationResult, XDocument projectFile, DirectoryInfo projectFolder, Project definition)
         {
             XNamespace nsSys = "http://schemas.microsoft.com/developer/msbuild/2003";
 
@@ -20,7 +26,7 @@ namespace Project2015To2017
                 .Select(FormatAssemblyReference)
                 .Where(r => r != null).ToList();
 
-            return Task.CompletedTask;
+            return Task.FromResult(true);
         }
 
         /// <summary>

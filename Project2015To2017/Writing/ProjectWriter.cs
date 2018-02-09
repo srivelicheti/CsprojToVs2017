@@ -7,6 +7,32 @@ using System.Xml.Linq;
 
 namespace Project2015To2017.Writing
 {
+    internal static class Extensions {
+        public static void AddIfNotEmpty(this XElement element, XElement added)
+        {
+            if(added != null && (added.HasAttributes || added.HasElements))
+            {
+                element.Add(added);
+            }
+        }
+
+        public static void AddIfNotEmpty(this XElement element, IEnumerable<XElement> added)
+        {
+            if(added != null && added.Count() > 0)
+            {
+                foreach(var el in added)
+                {
+                    AddIfNotEmpty(element, el);
+                }
+            }
+        }
+
+        public static bool IsVs2015ProjFileFormat(this XDocument document)
+        {
+            XNamespace nsSys = "http://schemas.microsoft.com/developer/msbuild/2003";
+            return document.Element(nsSys + "Project") != null;
+        }
+    }
     internal sealed class ProjectWriter
     {
         public void Write(Project project, FileInfo outputFile)
@@ -24,11 +50,18 @@ namespace Project2015To2017.Writing
         {
             var projectNode = new XElement("Project", new XAttribute("Sdk", "Microsoft.NET.Sdk"));
 
-            projectNode.Add(GetMainPropertyGroup(project, outputFile));
+            projectNode.AddIfNotEmpty(GetMainPropertyGroup(project, outputFile));
+            projectNode.AddIfNotEmpty(GetAdditionalPropertyGroup(project, outputFile));
+
+
+            if (project.ImportedXElements != null)
+                projectNode.AddIfNotEmpty(project.ImportedXElements.Select(RemoveAllNamespaces));
+            if (project.UnConditionalPropertyGroups != null)
+                projectNode.AddIfNotEmpty(project.UnConditionalPropertyGroups.Select(RemoveAllNamespaces));
 
             if (project.ConditionalPropertyGroups != null)
             {
-                projectNode.Add(project.ConditionalPropertyGroups.Select(RemoveAllNamespaces));
+                projectNode.AddIfNotEmpty(project.ConditionalPropertyGroups.Select(RemoveAllNamespaces));
             }
 
             if (project.ProjectReferences?.Count > 0)
@@ -147,7 +180,7 @@ namespace Project2015To2017.Writing
         private XElement GetMainPropertyGroup(Project project, FileInfo outputFile)
         {
             var mainPropertyGroup = new XElement("PropertyGroup");
-
+            //if(project.OutPutTargetFrameworkType)
             AddTargetFrameworks(mainPropertyGroup, project.TargetFrameworks);
 
             AddIfNotNull(mainPropertyGroup, "Optimize", project.Optimize ? "true" : null);
@@ -158,18 +191,31 @@ namespace Project2015To2017.Writing
             AddIfNotNull(mainPropertyGroup, "SignAssembly", project.SignAssembly ? "true" : null);
             AddIfNotNull(mainPropertyGroup, "AssemblyOriginatorKeyFile", project.AssemblyOriginatorKeyFile);
 
-            switch (project.Type)
+            if (project.OutPutApplicationTypeToProj)
             {
-                case ApplicationType.ConsoleApplication:
-                    mainPropertyGroup.Add(new XElement("OutputType", "Exe"));
-                    break;
-                case ApplicationType.WindowsApplication:
-                    mainPropertyGroup.Add(new XElement("OutputType", "WinExe"));
-                    break;
+                switch (project.Type)
+                {
+                    case ApplicationType.ConsoleApplication:
+                        mainPropertyGroup.Add(new XElement("OutputType", "Exe"));
+                        break;
+                    case ApplicationType.WindowsApplication:
+                        mainPropertyGroup.Add(new XElement("OutputType", "WinExe"));
+                        break;
+                }
             }
-
             AddAssemblyAttributeNodes(mainPropertyGroup, project.AssemblyAttributes);
             AddPackageNodes(mainPropertyGroup, project.PackageConfiguration, project.AssemblyAttributes);
+
+            return mainPropertyGroup;
+        }
+
+        private XElement GetAdditionalPropertyGroup(Project project, FileInfo outputFile)
+        {
+            var mainPropertyGroup = new XElement("PropertyGroup");
+                        
+            AddIfNotNull(mainPropertyGroup, "FileAlignment", project.FileAlignment);
+            AddIfNotNull(mainPropertyGroup, "SchemaVersion", project.SchemaVersion);
+            AddIfNotNull(mainPropertyGroup, "AppDesignerFolder", project.AppDesignerFolder);
 
             return mainPropertyGroup;
         }
