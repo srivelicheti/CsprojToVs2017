@@ -3,6 +3,7 @@ using System.Xml.Linq;
 
 namespace Project2015To2017.Definition
 {
+
     internal sealed class Project
     {
         public string ProjFilePath { get; set; }

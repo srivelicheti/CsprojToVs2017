@@ -35,9 +35,13 @@ namespace Project2015To2017
             {
                 
                 var relativePath = im.Attribute("Project")?.Value;
-                if(!relativePath.EndsWith("nuget.targets",StringComparison.OrdinalIgnoreCase) &&
+                if (relativePath != null &&
+                    !relativePath.EndsWith("nuget.targets", StringComparison.OrdinalIgnoreCase) &&
                     !relativePath.EndsWith("csharp.targets", StringComparison.OrdinalIgnoreCase))
+                {
                     importedXElements.Add(im);
+                }
+
                 if (string.IsNullOrEmpty(relativePath) || !relativePath.EndsWith("proj")) continue;
 
                 string finalPath = string.Empty;
@@ -91,8 +95,11 @@ namespace Project2015To2017
                 // Process all csprojs found in given directory
                 if (Path.GetExtension(transformationSettings.Path) != ".csproj")
                 {
-                    var projectFiles = Directory.EnumerateFiles(transformationSettings.Path, "*.csproj", SearchOption.AllDirectories).ToArray();
-                    if (projectFiles.Length == 0)
+                    var projectFiles = Directory.EnumerateFiles(transformationSettings.Path, "*.csproj", SearchOption.AllDirectories).ToList();
+                    projectFiles.AddRange(Directory.EnumerateFiles(transformationSettings.Path, "*.vbproj",
+                        SearchOption.AllDirectories));
+
+                    if (projectFiles.Count == 0)
                     {
                         logger.LogError("No Project files found in the specified directory");
                         return;
@@ -269,10 +276,10 @@ namespace Project2015To2017
 
             var config = builder.Build();
 
-            var services = new ServiceCollection()
-              .AddLogging();
+            //var services = new ServiceCollection()
+            //  .AddLogging();
 
-            var serviceProvider = services.BuildServiceProvider();
+            //var serviceProvider = services.BuildServiceProvider();
 
             Log4NetHelper.ConfigureLog4Net(appRoot, "Log4net.config", LoggerRepo);
             loggerFactory = new LoggerFactory().

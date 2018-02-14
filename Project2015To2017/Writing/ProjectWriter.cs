@@ -266,7 +266,7 @@ namespace Project2015To2017.Writing
             };
 
             var childNodes = attributes
-                .Where(x => !string.IsNullOrWhiteSpace(x.Value))
+                .Where(x => x.Value != null)
                 .Select(x => new XElement(x.Key, "false"))
                 .ToArray();
 

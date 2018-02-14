@@ -41,7 +41,8 @@ namespace Project2015To2017
                 .Element(nsSys + "Project")
                 .Elements(nsSys + "ItemGroup");
 
-            var compileManualIncludes = FindNonWildcardMatchedFiles(projectFolder, itemGroups, "*.cs", nsSys + "Compile");
+            var extn = definition.ProjFilePath.EndsWith("csproj", StringComparison.OrdinalIgnoreCase) ? "*.cs" : "*.vb";
+            var compileManualIncludes = FindNonWildcardMatchedFiles(projectFolder, itemGroups, extn, nsSys + "Compile");
             var otherIncludes = ItemsToProject.SelectMany(x => itemGroups.Elements(nsSys + x));
 
             // Remove packages.config since those references were already added to the CSProj file.
@@ -67,12 +68,12 @@ namespace Project2015To2017
                 {
                     if (!Path.GetFullPath(Path.Combine(projectFolder.FullName, includeAttribute.Value)).StartsWith(projectFolder.FullName))
                     {
-                        Logger.LogWarning($"Include cannot be done through wildcard, adding as separate include {compiledFile}.");
+                        Logger.LogInformation($"Include cannot be done through wildcard, adding as separate include {compiledFile}.");
                         manualIncludes.Add(compiledFile);
                     }
                     else if (compiledFile.Attributes().Count() != 1)
                     {
-                        Logger.LogWarning($"Include cannot be done through wildcard, adding as separate include {compiledFile}.");
+                        Logger.LogInformation($"Include cannot be done through wildcard, adding as separate include {compiledFile}.");
                         manualIncludes.Add(compiledFile);
                     }
                     else if (compiledFile.Elements().Count() != 0)
@@ -90,7 +91,7 @@ namespace Project2015To2017
                         }
                         else
                         {
-                            Logger.LogWarning($"Include cannot be done through wildcard, adding as separate include {compiledFile}.");
+                            Logger.LogInformation($"Include cannot be done through wildcard, adding as separate include {compiledFile}.");
                             manualIncludes.Add(compiledFile);
                         }
                     }
