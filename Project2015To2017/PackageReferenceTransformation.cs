@@ -12,10 +12,13 @@ namespace Project2015To2017
 {
     internal sealed class PackageReferenceTransformation : ITransformation
     {
+        private readonly TransformationSettings transformationSettings;
+
         private ILogger Logger { get; set; }
-        public PackageReferenceTransformation(ILoggerFactory loggerFactory)
+        public PackageReferenceTransformation(ILoggerFactory loggerFactory, TransformationSettings transformationSettings)
         {
             this.Logger = loggerFactory.CreateLogger<PackageReferenceTransformation>();
+            this.transformationSettings = transformationSettings;
         }
         public Task<bool> TransformAsync(bool prevTransformationResult, XDocument projectFile, DirectoryInfo projectFolder, Project definition)
         {

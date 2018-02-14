@@ -12,10 +12,13 @@ namespace Project2015To2017
 {
     internal sealed class ProjectPropertiesTransformation : ITransformation
     {
+        private readonly TransformationSettings _transformationSettings;
+
         private ILogger Logger { get; set; }
-        public ProjectPropertiesTransformation(ILoggerFactory loggerFactory)
+        public ProjectPropertiesTransformation(ILoggerFactory loggerFactory, TransformationSettings transformationSettings)
         {
             this.Logger = loggerFactory.CreateLogger<ProjectPropertiesTransformation>();
+            this._transformationSettings = transformationSettings;
         }
         public Task<bool> TransformAsync(bool prevTransResult, XDocument projectFile, DirectoryInfo projectFolder, Project definition)
         {
@@ -94,7 +97,7 @@ namespace Project2015To2017
                         Logger.LogWarning($"Target Framework not determined for {definition.ProjFilePath}");
                 }
 			}
-
+            UpdateTargetFrameworkVersionInConditionalPropertyGorups(propertyGroups);
             definition.ConditionalPropertyGroups = propertyGroups.Where(x => x.Attribute("Condition") != null).ToArray();
             RemoveUsedUnConditionalPropertyGroupElements(nsSys, unconditionalPropertyGroups);
             definition.UnConditionalPropertyGroups = unconditionalPropertyGroups.Where(x => x.HasElements).ToList();
@@ -108,6 +111,20 @@ namespace Project2015To2017
 
 
             return Task.FromResult<bool>(true);
+        }
+
+        private void UpdateTargetFrameworkVersionInConditionalPropertyGorups(List<XElement> propertyGroups) {
+            var condPropGroups = propertyGroups.Where(x => x.Attribute("Condition") != null);
+            foreach(var group in condPropGroups)
+            {
+                if(group.Element("TargetFrameworkVersion") != null)
+                {
+                    var el = group.Element("TargetFrameworkVersion");
+                    el.Name = "TargetFramework";
+                    el.Value = ToTargetFramework(el.Value);
+                    
+                }
+            }
         }
 
         private string[] GetNewFormatTargetFrameworkVersion(IEnumerable<XElement> unconditionalPropertyGroups)
@@ -146,6 +163,8 @@ namespace Project2015To2017
             {
                 return "net" + targetFramework.Substring(1).Replace(".", string.Empty);
             }
+            else if (targetFramework.StartsWith("profile", StringComparison.OrdinalIgnoreCase))
+                return "netstandard1.6";
 
             throw new NotSupportedException($"Target framework {targetFramework} is not supported.");
         }

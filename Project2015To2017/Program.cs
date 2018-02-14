@@ -33,7 +33,7 @@ namespace Project2015To2017
             var imports = projectFile.Descendants().Where(x => x.Name.LocalName == "Import").ToList();
             foreach (var im in imports)
             {
-                
+
                 var relativePath = im.Attribute("Project")?.Value;
                 if (relativePath != null &&
                     !relativePath.EndsWith("nuget.targets", StringComparison.OrdinalIgnoreCase) &&
@@ -52,10 +52,10 @@ namespace Project2015To2017
                 }
                 else
                 {
-                   try{ finalPath = Path.Combine(projectDirectory.ToString(), relativePath); } catch { }
+                    try { finalPath = Path.Combine(projectDirectory.ToString(), relativePath); } catch { }
                 }
                 //process only relative paths
-               if(string.IsNullOrEmpty(finalPath)) continue;
+                if (string.IsNullOrEmpty(finalPath)) continue;
                 paths.Add(finalPath);
             }
 
@@ -73,24 +73,22 @@ namespace Project2015To2017
             //}
 
             StartUp();
-
-            _transformationsToApply = new ITransformation[]
-        {
-            new ProjectPropertiesTransformation(loggerFactory),
-            new ProjectReferenceTransformation(loggerFactory),
-            new PackageReferenceTransformation(loggerFactory),
-            new AssemblyReferenceTransformation(loggerFactory),
-            new RemovePackageAssemblyReferencesTransformation(loggerFactory),
-            new FileTransformation(loggerFactory),
-            new AssemblyInfoTransformation(loggerFactory),
-            new NugetPackageTransformation(loggerFactory)
-        };
-
             var parser = new CommandLine.Parser(with => with.HelpWriter = Console.Error);
-
             var parseResult = parser.ParseArguments(() => transformationSettings, args);
             if (parseResult.Tag == CommandLine.ParserResultType.Parsed)
             {
+                _transformationsToApply = new ITransformation[]
+                {
+                    new ProjectPropertiesTransformation(loggerFactory,transformationSettings),
+                    new ProjectReferenceTransformation(loggerFactory,transformationSettings),
+                    new PackageReferenceTransformation(loggerFactory,transformationSettings),
+                    new AssemblyReferenceTransformation(loggerFactory,transformationSettings),
+                    new RemovePackageAssemblyReferencesTransformation(loggerFactory,transformationSettings),
+                    new FileTransformation(loggerFactory,transformationSettings),
+                    new AssemblyInfoTransformation(loggerFactory,transformationSettings),
+                    new NugetPackageTransformation(loggerFactory,transformationSettings)
+                };
+
                 parseResult.WithParsed(x => transformationSettings = x);
                 // Process all csprojs found in given directory
                 if (Path.GetExtension(transformationSettings.Path) != ".csproj")
@@ -112,7 +110,7 @@ namespace Project2015To2017
                         {
                             ProcessFile(projectFile);
                         }
-                        catch(Exception ex)
+                        catch (Exception ex)
                         {
                             logger.LogError($"unable to convert {projectFile}: ", ex);
                         }
@@ -161,10 +159,10 @@ namespace Project2015To2017
 
             var projectDefinition = new Project() { ProjFilePath = Path.GetFullPath(filePath) };
 
-            
+
             var directory = fileInfo.Directory;
 
-            
+
             List<XElement> importedXElements;
             var projectImports = ProcessImports(xmlDocument, file.Directory, out importedXElements);
             projectDefinition.ImportedXElements = importedXElements;
@@ -172,22 +170,22 @@ namespace Project2015To2017
             foreach (var projectImport in projectImports)
             {
                 importedProjects.Add(XDocument.Load(projectImport));
-                if(!processedFiles.Contains(Path.GetFullPath(projectImport)))
-                    ProcessFile(projectImport,false);
+                if (!processedFiles.Contains(Path.GetFullPath(projectImport)))
+                    ProcessFile(projectImport, false);
             }
 
             projectDefinition.ProjectImports = importedProjects.ToArray();
-            if(!includeFileTranformations)
+            if (!includeFileTranformations)
                 _transformationsToApply.Where(x => !typeof(FileTransformation).IsAssignableFrom(x.GetType())).Select(t => t.TransformAsync(true, xmlDocument, directory, projectDefinition))
                 .ToArray();
             else
-            Task.WaitAll(_transformationsToApply.Select(t => t.TransformAsync(true, xmlDocument, directory, projectDefinition))
-                .ToArray());
+                Task.WaitAll(_transformationsToApply.Select(t => t.TransformAsync(true, xmlDocument, directory, projectDefinition))
+                    .ToArray());
 
             AssemblyReferenceTransformation.RemoveExtraAssemblyReferences(projectDefinition);
 
             var projectFile = fileInfo.FullName;
-           
+
 
             var packagesFile = Path.Combine(fileInfo.DirectoryName, "packages.config");
             if (File.Exists(packagesFile))
@@ -228,11 +226,11 @@ namespace Project2015To2017
             {
                 return false;
                 Console.Write($"Cannot create backup file. Please delete {backupFileName}. Do you want to Copy Old to Original csproj file y/N?");
-                 if(Console.ReadLine().ToLowerInvariant() == "y")
+                if (Console.ReadLine().ToLowerInvariant() == "y")
                 {
                     File.Delete(filename);
                     File.Copy(backupFileName, filename);
-                 //   File.Copy(filename, filename + ".old");
+                    //   File.Copy(filename, filename + ".old");
                     output = true;
                 }
 
@@ -291,9 +289,9 @@ namespace Project2015To2017
 
             Configuration = config;
             transformationSettings = config.Get<TransformationSettings>();
-                
 
-           
+
+
         }
 
     }

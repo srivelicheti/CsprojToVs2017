@@ -9,10 +9,13 @@ namespace Project2015To2017
 {
     internal sealed class ProjectReferenceTransformation : ITransformation
     {
+        private readonly TransformationSettings transformationSettings;
+
         private ILogger Logger { get; set; }
-        public ProjectReferenceTransformation(ILoggerFactory loggerFactory)
+        public ProjectReferenceTransformation(ILoggerFactory loggerFactory, TransformationSettings transformationSettings)
         {
             this.Logger = loggerFactory.CreateLogger<ProjectReferenceTransformation>();
+            this.transformationSettings = transformationSettings;
         }
         public Task<bool> TransformAsync(bool prevTransformationResult, XDocument projectFile, DirectoryInfo projectFolder, Project definition)
         {

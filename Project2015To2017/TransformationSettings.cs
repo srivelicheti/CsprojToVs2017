@@ -13,5 +13,11 @@ namespace Project2015To2017
         [Option('p', "path", Required = true, HelpText = @"Path to file\folder to look for proj files")]
         public string Path { get; set; }
 
+        [Option('e', "exclude", Required = false, HelpText = @"Path to file\folder to look for proj files")]
+        public string ExcludeProjectsMatching { get; set; }
+
+        [Option('c', "copy", Required = false, HelpText = @"Path to file\folder to look for proj files")]
+        public bool CopyRelativelyIncludedParentDirectoryFiles { get; set; }
+
     }
 }

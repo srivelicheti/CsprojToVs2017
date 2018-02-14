@@ -12,9 +12,12 @@ namespace Project2015To2017
     internal sealed class NugetPackageTransformation : ITransformation
     {
         private ILogger Logger { get; set; }
-        public NugetPackageTransformation(ILoggerFactory loggerFactory)
+        public TransformationSettings TransformationSettings { get; }
+
+        public NugetPackageTransformation(ILoggerFactory loggerFactory, TransformationSettings transformationSettings)
         {
             this.Logger = loggerFactory.CreateLogger<NugetPackageTransformation>();
+            TransformationSettings = transformationSettings;
         }
         public Task<bool> TransformAsync(bool prevTransformationResult, XDocument projectFile, DirectoryInfo projectFolder, Project definition)
         {

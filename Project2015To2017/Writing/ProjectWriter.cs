@@ -117,6 +117,11 @@ namespace Project2015To2017.Writing
                 var includeGroup = new XElement("ItemGroup");
                 foreach (var include in project.ItemsToInclude.Select(RemoveAllNamespaces))
                 {
+                    var linked = include.Element("Link");
+                    if ( linked != null) {
+                        linked.Remove();
+                        include.SetAttributeValue("Link", linked.Value);
+                    }
                     includeGroup.Add(include);
                 }
 
@@ -190,7 +195,10 @@ namespace Project2015To2017.Writing
             AddIfNotNull(mainPropertyGroup, "AllowUnsafeBlocks", project.AllowUnsafeBlocks ? "true" : null);
             AddIfNotNull(mainPropertyGroup, "SignAssembly", project.SignAssembly ? "true" : null);
             AddIfNotNull(mainPropertyGroup, "AssemblyOriginatorKeyFile", project.AssemblyOriginatorKeyFile);
-
+            //if (project.ItemsToInclude.Count > 0)
+            //{
+            //    AddIfNotNull(mainPropertyGroup, "EnableDefaultCompileItems", "false");
+            //}
             if (project.OutPutApplicationTypeToProj)
             {
                 switch (project.Type)

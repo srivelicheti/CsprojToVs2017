@@ -12,9 +12,12 @@ namespace Project2015To2017
     internal sealed class FileTransformation : ITransformation
     {
         private ILogger Logger { get; set; }
-        public FileTransformation(ILoggerFactory loggerFactory)
+        public TransformationSettings TransformationSettings { get; }
+
+        public FileTransformation(ILoggerFactory loggerFactory, TransformationSettings transformationSettings)
         {
             this.Logger = loggerFactory.CreateLogger<FileTransformation>();
+            TransformationSettings = transformationSettings;
         }
         private static readonly IReadOnlyList<string> ItemsToProject = new[]
         {
@@ -68,11 +71,26 @@ namespace Project2015To2017
                 {
                     if (!Path.GetFullPath(Path.Combine(projectFolder.FullName, includeAttribute.Value)).StartsWith(projectFolder.FullName))
                     {
-                        Logger.LogInformation($"Include cannot be done through wildcard, adding as separate include {compiledFile}.");
-                        manualIncludes.Add(compiledFile);
+                        //if (TransformationSettings.CopyRelativelyIncludedParentDirectoryFiles)
+                        //{
+                        //    var origFilePath = Path.GetFullPath(Path.Combine(projectFolder.FullName, includeAttribute.Value));
+                        //    var origFileInfo = new FileInfo(origFilePath);
+                        //    string path = Path.GetFullPath(Path.Combine(projectFolder.FullName, origFileInfo.Name));
+                        //    if (!string.IsNullOrEmpty(compiledFile.Elements("Link").FirstOrDefault()?.Value))
+                        //        path = Path.GetFullPath(Path.Combine(projectFolder.FullName, compiledFile.Elements("Link").FirstOrDefault().Value));
+                        //    File.Copy(origFilePath, path);
+                        //}
+                        //else
+                        {
+                            Logger.LogInformation($"Include cannot be done through wildcard, adding as separate include {compiledFile}.");
+                            manualIncludes.Add(compiledFile);
+                        }
                     }
                     else if (compiledFile.Attributes().Count() != 1)
                     {
+                        filesMatchingWildcard.Add(includeAttribute.Value);
+                        compiledFile.SetAttributeValue("Update", includeAttribute.Value);
+                        includeAttribute.Remove();
                         Logger.LogInformation($"Include cannot be done through wildcard, adding as separate include {compiledFile}.");
                         manualIncludes.Add(compiledFile);
                     }
@@ -91,6 +109,9 @@ namespace Project2015To2017
                         }
                         else
                         {
+                            filesMatchingWildcard.Add(includeAttribute.Value);
+                            compiledFile.SetAttributeValue("Update", includeAttribute.Value);
+                            includeAttribute.Remove();
                             Logger.LogInformation($"Include cannot be done through wildcard, adding as separate include {compiledFile}.");
                             manualIncludes.Add(compiledFile);
                         }
@@ -123,11 +144,18 @@ namespace Project2015To2017
                     continue;
                 }
 
-                Logger.LogWarning($"File found which was not included, consider removing {nonListedFile}.");
+                if (TransformationSettings.RemoveFilesNotIncludedInProj) {
+                    Logger.LogWarning($"File found which was not included, Deleting {nonListedFile}.");
+                    File.Delete(nonListedFile);
+                }
+                else
+                    Logger.LogWarning($"File found which was not included, consider removing {nonListedFile}.");
+
             }
 
             foreach (var fileNotOnDisk in knownFullPaths.Except(filesInFolder).Where(x => x.StartsWith(projectFolder.FullName, StringComparison.OrdinalIgnoreCase)))
             {
+
                 Logger.LogWarning($"File was included but is not on disk: {fileNotOnDisk}.");
             }
 

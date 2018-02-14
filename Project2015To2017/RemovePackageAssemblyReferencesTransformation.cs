@@ -10,10 +10,13 @@ namespace Project2015To2017
 {
     internal sealed class RemovePackageAssemblyReferencesTransformation : ITransformation
 	{
+        private readonly TransformationSettings transformationSettings;
+
         private ILogger Logger { get; set; }
-        public RemovePackageAssemblyReferencesTransformation(ILoggerFactory loggerFactory)
+        public RemovePackageAssemblyReferencesTransformation(ILoggerFactory loggerFactory, TransformationSettings transformationSettings)
         {
             this.Logger = loggerFactory.CreateLogger<RemovePackageAssemblyReferencesTransformation>();
+            this.transformationSettings = transformationSettings;
         }
         public Task<bool> TransformAsync(bool prevTransformationResult, XDocument projectFile, DirectoryInfo projectFolder, Project definition)
         {
